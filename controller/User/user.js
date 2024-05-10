@@ -207,3 +207,55 @@ exports.resetPassword = async (req, res, next) => {
       next(err);
     }
   }
+
+exports.manageProfilePic = async(req,res,next)=>{
+  try{
+    const { userId } = req;
+    const image  = req.file;
+
+    if(!image){
+      const error = new Error('Image not found');
+      error.status = 404;
+      throw error;
+    }
+    const user = await User.findById(userId);
+
+    if(!user){
+      const error = new Error('User not found');
+      error.status = 404;
+      throw error;
+    }
+
+    const params = {
+      Bucket: AWS_Bucket_Name,
+      Key: `images/${userId}-${uuidv4()}-${image.originalname}`,
+      Body: image.buffer,
+      ContentType: image.mimetype
+    };
+
+    const uKey = await s3.upload(params).promise();
+
+    if(!uKey){
+      const error = new Error('Image upload Failed');
+      error.status = 422;
+      throw error;
+    }
+
+    user.photo = await uKey?.Key;
+
+    const updatedImg = await user.save();
+    if(!updatedImg){
+      const error = new Error('Image upload Failed');
+      error.status = 422;
+      throw error;
+    }
+
+    res.status(200).json({message: "Image Updated"});
+
+  }catch(err){
+    if (!err.status) {
+      err.status = 500;
+    }
+    next(err);
+  }
+}

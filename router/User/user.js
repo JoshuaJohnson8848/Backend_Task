@@ -15,4 +15,6 @@ router.put('/privacy',isAuth, userController.setPrivacy);
 
 router.put('/:id',isAuth, userController.updateUser);
 
+router.post('/image',isAuth, userController.manageProfilePic);
+
 module.exports = router;
