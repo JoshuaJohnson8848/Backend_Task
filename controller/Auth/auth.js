@@ -2,6 +2,8 @@ const User = require('../../models/user');
 const UserType = require('../../models/userType');
 const bcrypt = require('bcryptjs');
 const JWT = require('jsonwebtoken');
+const { OAuth2Client } = require('google-auth-library');
+const client = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
 
 const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
@@ -152,6 +154,173 @@ exports.login = async (req, res, next) => {
         userType: loadedUser.userType,
         userId: loadedUser._id
       });
+  } catch (err) {
+    if (!err.status) {
+      err.status = 500;
+    }
+    next(err);
+  }
+};
+
+exports.googleSignup = async (req, res, next) => {
+  try {
+    const { email, pass, name, phone, bio, googleToken } = req.body;
+
+    const ticket = await client.verifyIdToken({
+      idToken: googleToken,
+      audience: process.env.GOOGLE_CLIENT_ID,
+    });
+    const payload = ticket.getPayload();
+    const googleEmail = payload.email;
+
+    if (!emailRegex.test(googleEmail)) {
+      const error = new Error('Invalid Email Format');
+      error.status = 422;
+      throw error;
+    }
+
+    const existUser = await User.findOne({ email: email });
+
+    if (existUser) {
+      const error = new Error('User Already Exist');
+      error.status = 422;
+      throw error;
+    }
+    
+    if(phone.length !== 10){
+      const error = new Error('Enter Valid Phone Number');
+      error.status = 422;
+      throw error;
+    }
+
+    const existPhone = await User.findOne({ phone: phone });
+
+    if (existPhone) {
+      const error = new Error('Phone Number Already Exist');
+      error.status = 422;
+      throw error;
+    }
+
+    const hashedPass = await bcrypt.hash(pass, 12);
+
+    if (!hashedPass) {
+      const error = new Error('Password Error');
+      error.status = 422;
+      throw error;
+    }
+
+    const user = new User({
+      email: email,
+      phone: phone,
+      bio: bio,
+      password: hashedPass,
+      name: name,
+      photo: '',
+      public: false,
+      userType: 'user',
+    });
+
+    const createdUser = await user.save();
+
+    if (!createdUser) {
+      const error = new Error('User Signup Failed');
+      error.status = 422;
+      throw error;
+    }
+
+    res.status(200).json({ message: 'Successfully Signed Up', createdUser });
+  } catch (err) {
+    if (!err.status) {
+      err.status = 500;
+    }
+    next(err);
+  }
+};
+
+
+exports.googleLogin = async (req, res, next) => {
+  try {
+    const { email, pass, googleToken } = req.body;
+    let loadedUser;
+
+    if (googleToken) {
+      const ticket = await client.verifyIdToken({
+        idToken: googleToken,
+        audience: process.env.GOOGLE_CLIENT_ID,
+      });
+      const payload = ticket.getPayload();
+      const googleEmail = payload.email;
+
+      const existUser = await User.findOne({ email: googleEmail });
+
+      if (!existUser) {
+        return res.status(422).json({ error: 'User not found' });
+      }
+
+      loadedUser = existUser;
+    } else {
+      const existUser = await User.aggregate([
+        [
+          {
+            $match:
+              {
+                email: email,
+              },
+          },
+          {
+            $lookup: {
+              from: "usertypes",
+              localField: "userType",
+              foreignField: "_id",
+              as: "userTypeData",
+            },
+          },
+          {
+            $unwind:
+              {
+                path: "$userTypeData",
+              },
+          },
+          {
+            $project:
+              {
+                email: 1,
+                userType: "$userTypeData.userType",
+                password: 1
+              },
+          },
+        ]
+      ]);
+
+      if (!existUser.length) {
+        return res.status(422).json({ error: 'User not found' });
+      }
+
+      loadedUser = existUser[0];
+
+      const hashedPass = await bcrypt.compare(pass, loadedUser.password);
+
+      if (!hashedPass) {
+        return res.status(422).json({ error: 'Password Error' });
+      }
+    }
+
+    const token = JWT.sign(
+      {
+        email: loadedUser.email,
+        userId: loadedUser._id.toString(),
+        userType: loadedUser.userType.toString()
+      },
+      process.env.JWT_SECRET,
+      { expiresIn: '24h' }
+    );
+
+    res.status(200).json({
+      message: 'Successfully Logged In',
+      token: token,
+      userType: loadedUser.userType,
+      userId: loadedUser._id
+    });
   } catch (err) {
     if (!err.status) {
       err.status = 500;
