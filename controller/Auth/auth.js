@@ -82,3 +82,80 @@ exports.signup = async (req, res, next) => {
   }
 };
 
+exports.login = async (req, res, next) => {
+  try {
+    let loadedUser;
+    const { email, pass } = req.body;
+    const existUser = await User.aggregate([
+      [
+        {
+          $match:
+            {
+              email: email,
+            },
+        },
+        {
+          $lookup: {
+            from: "usertypes",
+            localField: "userType",
+            foreignField: "_id",
+            as: "userTypeData",
+          },
+        },
+        {
+          $unwind:
+            {
+              path: "$userTypeData",
+            },
+        },
+        {
+          $project:
+            {
+              email: 1,
+              userType: "$userTypeData.userType",
+              password: 1
+            },
+        },
+      ]
+    ]);
+
+    if (!existUser.length) {
+      const error = new Error('User not found');
+      error.status = 422;
+      throw error;
+    }
+    loadedUser = existUser[0];
+    
+    const hashedPass = await bcrypt.compare(pass, loadedUser.password);
+    
+    if (!hashedPass) {
+      const error = new Error('Password Error');
+      error.status = 422;
+      throw error;
+    }
+    
+    const token = JWT.sign(
+      {
+        email: loadedUser.email,
+        userId: loadedUser._id.toString(),
+        userType: loadedUser.userType.toString()
+      },
+      process.env.JWT_SECRET,
+      { expiresIn: '24h' }
+      );
+      
+    res
+      .status(200)
+      .json({
+        message: 'Succesfully Logged In',
+        token: token,
+        userType: loadedUser.userType,
+        userId: loadedUser._id
+      });
+  } catch (err) {
+    if (!err.status) {
+      err.status = 500;
+    }
+    next(err);
+  }
+};
