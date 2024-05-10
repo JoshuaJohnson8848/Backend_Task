@@ -5,6 +5,8 @@ const isAuth = require('../../middleware/isAuth');
 
 const userController = require('../../controller/User/user');
 
+router.get('', isAuth, userController.getPublicUsers); 
+
 router.get('/:id',isAuth, userController.getProfile);
 
 module.exports = router;
