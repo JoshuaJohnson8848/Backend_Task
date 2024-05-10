@@ -7,7 +7,7 @@ const userTypeController = require('../../controller/UserType/userType');
 
 router.get('', isAdmin, userTypeController.getAllTypes);
 
-router.post('', isAdmin, userTypeController.addUserType);
+router.post('', userTypeController.addUserType);
 
 router.put('/:id', isAdmin, userTypeController.updateUserType);
 
