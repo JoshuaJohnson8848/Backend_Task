@@ -87,3 +87,51 @@ exports.getPublicUsers = async (req, res, next) => {
     next(err);
   }
 };
+
+exports.updateUser = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const { name, email, photo, bio, phone } = req.body;
+
+    if (!emailRegex.test(email)) {
+      const error = new Error('Invalid Email Format');
+      error.status = 422;
+      throw error;
+    }
+
+    if(phone.length != 10){
+        const error = new Error('Enter Valid Phone Number');
+        error.status = 422;
+        throw error;
+    }
+    
+    const existUser = await User.findById(id);
+
+    if (!existUser) {
+        const error = new Error('User not found');
+        error.status = 422;
+        throw error;
+    }
+
+    existUser.name = name;
+    existUser.email = email;
+    existUser.bio = bio;
+    existUser.phone = phone;
+
+    const updatedUser = await existUser.save();
+
+    if (!updatedUser) {
+        const error = new Error('User not updated');
+        error.status = 422;
+        throw error;
+    }
+
+    res.status(200).json({message: "User Updated", user: updatedUser});
+
+  } catch (err) {
+    if (!err.status) {
+      err.status = 500;
+    }
+    next(err);
+  }
+};
