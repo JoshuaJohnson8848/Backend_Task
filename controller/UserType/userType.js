@@ -44,3 +44,22 @@ exports.deleteUserType = async (req, res, next) => {
       next(err);
     }
 };
+
+exports.getAllTypes = async (req, res, next) => {
+    try {
+      const types = await UserType.find();
+
+      if(!types){
+          const error = new Error('UserType not Found');
+          error.status = 422;
+          throw error;
+      }
+  
+      res.status(200).json({message: "UserTypes Fetched", types})
+    } catch (err) {
+      if (!err.status) {
+        err.status = 500;
+      }
+      next(err);
+    }
+};
