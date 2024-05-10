@@ -28,6 +28,7 @@ app.use((req, res, next) => {
 app.use(multer().single('image'));
 
 app.use('',authRouter);
+app.use('/user',userRouter);
 app.use('/admin',adminRouter);
 app.use('/userType',userTypeRouter);
 
