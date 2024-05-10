@@ -22,3 +22,25 @@ exports.addUserType = async (req, res, next) => {
     next(err);
   }
 };
+
+
+exports.deleteUserType = async (req, res, next) => {
+    try {
+      const { id } = req.params;
+
+      const deleteType = await UserType.findByIdAndDelete(id);
+
+      if(!deleteType){
+          const error = new Error('UserType Deletion Failed');
+          error.status = 422;
+          throw error;
+      }
+  
+      res.status(200).json({message: "UserType Deleted", deleted: true})
+    } catch (err) {
+      if (!err.status) {
+        err.status = 500;
+      }
+      next(err);
+    }
+};

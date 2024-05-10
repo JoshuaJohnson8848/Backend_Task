@@ -7,4 +7,6 @@ const userTypeController = require('../../controller/UserType/userType');
 
 router.post('', isAdmin, userTypeController.addUserType);
 
+router.delete('/:id', isAdmin, userTypeController.deleteUserType);
+
 module.exports = router;
