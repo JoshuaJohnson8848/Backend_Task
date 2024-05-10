@@ -135,3 +135,43 @@ exports.updateUser = async (req, res, next) => {
     next(err);
   }
 };
+
+exports.resetPassword = async (req, res, next) => {
+    try {
+        const { email, pass } = req.body;
+
+        const existUser = await User.findOne({ email: email });
+  
+        if (!existUser) {
+          const error = new Error('User not found');
+          error.status = 422;
+          throw error;
+        }
+
+        const hashedPass = await bcrypt.hash(pass, 12);
+
+        if (!hashedPass) {
+            const error = new Error('Password Error');
+            error.status = 422;
+            throw error;
+          }
+  
+        existUser.password = hashedPass;
+  
+        const updatedUser = await existUser.save();
+  
+        if (!updatedUser) {
+          const error = new Error('password not resetted');
+          error.status = 422;
+          throw error;
+        }
+  
+        res.status(200).json({message: "Password Reset Succesfully"});
+  
+    } catch (err) {
+      if (!err.status) {
+        err.status = 500;
+      }
+      next(err);
+    }
+  };

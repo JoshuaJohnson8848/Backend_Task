@@ -9,6 +9,8 @@ router.get('', isAuth, userController.getPublicUsers);
 
 router.get('/:id',isAuth, userController.getProfile);
 
+router.put('',isAuth, userController.resetPassword);
+
 router.put('/:id',isAuth, userController.updateUser);
 
 module.exports = router;
