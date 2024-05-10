@@ -259,3 +259,35 @@ exports.manageProfilePic = async(req,res,next)=>{
     next(err);
   }
 }
+
+exports.deleteImg = async(req, res,next)=>{
+  try{
+    const { userId } = req;
+    const user = await User.findById(userId);
+    
+    if(!user){
+      const error = new Error('Image Delete Failed');
+      error.status = 422;
+      throw error;
+    }
+
+    const deleted = await deleteImage(AWS_Bucket_Name, user.photo);
+    if(!deleted){
+      const error = new Error('Image Delete Failed');
+      error.status = 422;
+      throw error;
+    }
+
+    user.photo = '';
+    await user.save();
+
+    res.status(200).json({message: "Image Deleted"})
+
+  }catch(err){
+    if (!err.status) {
+      err.status = 500;
+    }
+    next(err);
+  }
+}
+  
