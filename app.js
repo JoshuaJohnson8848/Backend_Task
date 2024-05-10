@@ -5,6 +5,11 @@ const app = express();
 const multer = require('multer');
 const bodyParser = require('body-parser');
 
+const authRouter = require('./router/Auth/auth');
+const userRouter = require('./router/User/user');
+const adminRouter = require('./router/Admin/admin');
+const userTypeRouter = require('./router/UserType/usertype');
+
 app.use(express.json());
 app.use(bodyParser.json());
 app.use(express.urlencoded({ extended: true }));
@@ -21,6 +26,10 @@ app.use((req, res, next) => {
 });
 
 app.use(multer().single('image'));
+
+app.use('',authRouter);
+app.use('/admin',adminRouter);
+app.use('/userType',userTypeRouter);
 
 app.use((error, req, res, next) => {
   const data = error.data;
